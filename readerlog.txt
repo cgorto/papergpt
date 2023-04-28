@@ -1,4 +1,0 @@
-{
-  "Summary": "This source provides basic information on the 2022 midterm election results for Colorado's 3rd House District. Incumbent Republican Lauren Boebert and Democratic challenger Adam Frisch are the main candidates in the election. The information in the source is limited and does not provide detailed insight into their attributes, key issues, campaign strategies, or factors influencing the election. The source mainly includes vote percentages and demographic information on each county in the district.",
-  "Score": 20
-}
