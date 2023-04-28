@@ -14,8 +14,11 @@ search_engine_id = ENGINE_ID
 def main():
 
     #google_custom_search("Valorant esports impact esports organizations", cse_api_key, search_engine_id)
-    
-    Planner("Write a paper about the video game valorant")
+    #prompt user for input
+    query = input("What would you like to write about? ")
+    #use input for planner
+
+    Planner(query)
 
 if __name__ == "__main__":
     main()
