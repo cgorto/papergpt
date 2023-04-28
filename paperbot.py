@@ -2,6 +2,7 @@ import os
 import openai
 import json
 import requests
+import tiktoken
 from bs4 import BeautifulSoup
 from config import OPENAI_API_KEY, SEARCH_API_KEY, ENGINE_ID
 
@@ -11,6 +12,25 @@ cse_api_key = SEARCH_API_KEY
 search_engine_id = ENGINE_ID
 
 outline = ""
+
+
+def num_tokens_from_messages(messages):
+    try:
+        encoding = tiktoken.encoding_for_model("gpt-4")
+    except KeyError:
+      encoding = tiktoken.get_encoding("cl100k_base")
+  # note: future models may deviate from this
+    num_tokens = 0
+    
+    for message in messages:
+        num_tokens += 4  # every message follows <im_start>{role/name}\n{content}<im_end>\n
+        for key, value in message.items():
+            num_tokens += len(encoding.encode(value))
+            if key == "name":  # if there's a name, the role is omitted
+                num_tokens += -1  # role is always required and always 1 token
+    num_tokens += 2  # every reply is primed with <im_start>assistant
+    return num_tokens
+
 
 def google_custom_search(query, cse_api_key, search_engine_id):
     # Base URL for the API
@@ -191,6 +211,9 @@ def Reader(result):
         {"role":"user", "content":f'Outline: {outline}\n\n Source: {extract_text_from_url(result["link"])}'}
         ]
     print("Reader is working")
+    while num_tokens_from_messages(messages) > 8192:
+        #remove characters from the end of the source until num_tokens_from_messages is less than 8192
+        messages[1]["content"] = messages[1]["content"][:-1]
     response,a = generate_response(messages)
     print(response) #remove later on
     if not response:
