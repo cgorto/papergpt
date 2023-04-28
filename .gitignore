@@ -2,3 +2,4 @@ config.py
 essay.txt
 system copy.txt
 reader copy.txt
+__pycache__/
