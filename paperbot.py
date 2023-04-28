@@ -70,7 +70,6 @@ def google_custom_search(query, cse_api_key, search_engine_id):
             dictresponse = json.loads(response)
             result["summary"] = dictresponse["Summary"]
             result["score"] = dictresponse["Score"]
-            print("i hope it's not stuck here")
             
 
         return results
@@ -149,7 +148,7 @@ def Planner(user_input):
 
         
         #beginning of agent calls
-
+        researcher_calls = 0
         if "[RESEARCHER]" in response:
             #will be format of [RESEARCHER]:"[topics]", get topics in between the two quotes, store as topics
             topics = response.split("[RESEARCHER]:")[1]
@@ -160,7 +159,8 @@ def Planner(user_input):
             researcher_calls+=1
             #save top_sources as a text file, increment the number at the end of the file name
             with open(f"researcher{researcher_calls}.txt", "w+") as f:
-                f.write(top_sources)
+                for source in top_sources:
+                    f.write(source + "\n")
             print("Researcher done researching")
             messages.append({"role":"user" , "content":f"[RESEARCHER]: Here is the list of sources: \n {top_sources}"})
 

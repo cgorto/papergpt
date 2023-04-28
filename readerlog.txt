@@ -1,4 +1,4 @@
 {
-  "Summary": "This source provides basic information on the 2022 midterm election results for Colorado's 3rd House District. Incumbent Republican Lauren Boebert and Democratic challenger Adam Frisch are the main candidates in the election. The information in the source is limited and does not provide detailed insight into their attributes, key issues, campaign strategies, or factors influencing the election. The source mainly includes vote percentages and demographic information on each county in the district.",
-  "Score": 20
+  "Summary": "The article is a comprehensive guide to the Ascent map in Valorant, discussing attacker and defender roles, key map locations, strategies for both sides, and proper agent selection. The author also explains the importance of adaptability and understanding enemies' playstyles. The guide highlights essential callouts for the Ascent map and provides the most common compositions used by professionals. It also mentions the slight defender bias in Ascent, suggesting a 2-1-2 setup as a popular choice.",
+  "Score": 90
 }
