@@ -13,6 +13,44 @@ search_engine_id = ENGINE_ID
 
 outline = ""
 
+def parse_history():
+    messages = read_messages("plannerlog")
+    #save content of last message as response
+    response = messages[-1]["content"]
+    if "[RESEARCHER]" in response:
+        messages = read_messages("researcherlog")
+        response = messages[-1]["content"]
+        if "[SEARCH]" in response:
+            #check search log
+            a = 1
+    if "[WRITER]" in response:
+        read_messages("writerlog")
+    if "[EDITOR]" in response:
+        read_messages("editorlog")
+
+    return
+
+def write_response(response, file_name):
+    with open(f"conversations/" + file_name + ".txt", "a+") as f:
+        for resp in response:
+            f.write(resp + "\n")
+    return
+
+
+
+def write_messages(messages, file_name):
+    with open(f"conversations/" + file_name + ".txt", "w+") as f:
+        f.write("[")
+        for message in messages:
+            f.write('{"role":''"' + message["role"] + '", "content":' + message["content"] + "}" + "\n")
+        f.write("]")
+    return
+
+def read_messages(file_name):
+    with open(f"conversations/" + {file_name} + ".txt", "r") as f:
+        messages = json.load(f)
+    return messages
+
 
 def num_tokens_from_messages(messages):
     try:
@@ -62,8 +100,7 @@ def google_custom_search(query, cse_api_key, search_engine_id):
         for result in results:
             response = Reader(result)
             #write response to a file
-            with open(f"readerlog.txt", "w+") as f:
-                f.write(response)
+            write_response(response, "readerlog")
             #find first {, store everything after { as response
             index = response.find("{")
             response = response[index:]
@@ -75,7 +112,7 @@ def google_custom_search(query, cse_api_key, search_engine_id):
         return results
     else:
         print(f"Request failed with status code {response.status_code}")
-        return []
+        return [{"title": "Your search failed.", "link": ""}]
     
 def extract_text_from_url(url):
     response = requests.get(url)
@@ -109,14 +146,6 @@ def generate_response(messages):
     )
     return response['choices'][0]['message']['content'], response['choices'][0]['finish_reason']
 
-def generate_response_gpt4(messages): #THIS IS SOLELY FOR TESTING PURPOSES, REMOVE FROM PLANNER WHEN USING ALL GPT-4 AND REPLACE MODEL IN ABOVE FUNCTION
-    response = openai.ChatCompletion.create(
-        model="gpt-4",
-        
-        messages=messages,
-    )
-    return response['choices'][0]['message']['content'], response['choices'][0]['finish_reason']
-
 def Planner(user_input):
     global outline
 
@@ -134,8 +163,10 @@ def Planner(user_input):
     while "[DONE]" not in response:
         calls += 1
         print(calls)
-        response,finish_reason = generate_response_gpt4(messages)
+        response,finish_reason = generate_response(messages)
         messages.append({"role":"assistant", "content":response})
+        write_messages(messages, "plannerlog")
+        #write messages to plannerlog in conversations folder
         print(response)
 
         #if && in response, find second && and store everything between the two && as the outline
@@ -157,24 +188,23 @@ def Planner(user_input):
             
             top_sources = Researcher(topics)
             researcher_calls+=1
+            file_name = "sources.txt"
             #save top_sources as a text file, increment the number at the end of the file name
-            with open(f"researcher{researcher_calls}.txt", "w+") as f:
+            with open(f"conversations/" + file_name, "w+") as f:
                 for source in top_sources:
-                    f.write(source + "\n")
+                    f.write(source["title"] + " | " + source["link"] + "\n" + "     " + source["summary"] + "\n\n")
             print("Researcher done researching")
             messages.append({"role":"user" , "content":f"[RESEARCHER]: Here is the list of sources: \n {top_sources}"})
 
 
         if "[WRITER]" in response:
-            #will be format of [WRITER]:"Subset of Sources", section_num. store sources as sources, store section_num as num
+            #will be format of [WRITER]:"[num]", get num in between the two quotes, store as num
+            
             sources = response.split("[WRITER]:")[1]
             if sources[0] == '"':
-                #find comma after quotes, store everything before comma as sources
-                comma_index = sources.find(",")
-                sources = sources[1:comma_index]
-                #store everything after comma as num
-                num = sources[comma_index + 1:]
-                section = Writer(num,sources)
+                #then the next character is a number
+                num = sources[1]
+                section = Writer(num)
                 print("Writer done writing")
                 messages.append({"role":"user", "content":f"[WRITER]: Here is the finished section: \n {section}"})
 
@@ -199,18 +229,27 @@ def Researcher(topics):
     print("Researcher is working")
     response,a = generate_response(messages)
     messages.append({"role":"assistant", "content":response})
+    write_messages(messages, "researcherlog")
     print(response)
     while "[RETURN]" not in response:
         if "[SEARCH]" in response:
             search_query = response.split("[SEARCH]:")[1]
-            if search_query[0] == '"':
-                search_query = search_query[1:-1]
+            #remove the quotes from the search query
+            #find the first quote
+            index = search_query.find('"')
+            #find the second quote
+            next_index = search_query.find('"', index + 1)
+            #store everything between the two quotes as the search query
+            search_query = search_query[index + 1:next_index]
+            
+
             search_results = google_custom_search(search_query, cse_api_key, search_engine_id)
             print(search_results)
             print("Researcher is working")
             messages.append({"role":"user", "content":f"Search Results: {search_results}"})
             response,a = generate_response(messages)
             messages.append({"role": "assistant", "content": response})
+            write_messages(messages, "researcherlog")
             print(response) #remove later on
     
     #sort the top 10 search_results by score
@@ -244,7 +283,7 @@ def Reader(result):
         #remove amount of text that is over the limit based on the proportion of tokens over the limit
         #remove from the end of the source, ensuring that there are enough tokens for a response (500 tokens)
 
-        messages[1]["content"] = messages[1]["content"][:int(len(messages[1]["content"]) * (1 / over_prop))-500]
+        messages[1]["content"] = messages[1]["content"][:int(len(messages[1]["content"]) * (1 / over_prop))-600]
 
     print("Reader is working")
     response,a = generate_response(messages)
@@ -255,11 +294,14 @@ def Reader(result):
 
 
 
-def Writer(num,sources):
+def Writer(num):
     global outline
     #store writer.txt into content
     with open("writer.txt", "r") as f:
         writercontent = f.read()
+    #store conversations/sources.txt into sources
+    with open("conversations/sources.txt", "r") as f:
+        sources = f.read()
     messages = [
         {"role":"system", "content":f'{writercontent}'},
         {"role":"user", "content":f'Outline: {outline}\n\n Sources: {sources} \n\n Section for you to write: {num}'}
@@ -267,16 +309,22 @@ def Writer(num,sources):
     print("Writer is working")
     response,finish_reason = generate_response(messages)
     messages.append({"role":"assistant", "content":response})
+    write_messages(messages, "writerlog")
     if finish_reason == 'length':
         extra_response,a = generate_response(messages)
         print("Writer is working")
         messages.append({"role":"assistant", "content":extra_response})
+        write_messages(messages, "writerlog")
     
     response += " " + extra_response
-    #create a file with the name of the topic or update file if it already exists, adding response to the file
-    with open(f"essay.txt", "a+") as f:
+    #create a file called essay.txt in the conversations folder
+    with open(f"\conversations\essay.txt", "a+") as f:
         f.write("\n" + "$" + num + "$" + "\n" + response)
+        print("writing to txt")
+
     return response
+
+
 def Editor():
     global outline
     #store editor.txt into content
@@ -310,7 +358,7 @@ def Editor():
         essay = essay[:index] + response + essay[next_index:]
         messages.append({"role":"assistant", "content":response})
 
-    with open(f"essay.txt", "w+") as f:
+    with open(f"\conversations\essay.txt", "w+") as f:
         f.write(response)
     return 
 #def Citer():

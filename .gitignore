@@ -4,3 +4,6 @@ system copy.txt
 reader copy.txt
 __pycache__/
 readerlog.txt
+plannerlog.txt
+researcherlog.txt
+sources.txt
