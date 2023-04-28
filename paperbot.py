@@ -64,9 +64,13 @@ def google_custom_search(query, cse_api_key, search_engine_id):
             #write response to a file
             with open(f"readerlog.txt", "w+") as f:
                 f.write(response)
+            #find first {, store everything after { as response
+            index = response.find("{")
+            response = response[index:]
             dictresponse = json.loads(response)
             result["summary"] = dictresponse["Summary"]
             result["score"] = dictresponse["Score"]
+            print("i hope it's not stuck here")
             
 
         return results
@@ -98,6 +102,18 @@ def extract_text_from_url(url):
 def generate_response(messages):
     response = openai.ChatCompletion.create(
         model="gpt-4",
+        #model="gpt-4-0314",
+        #CHANGED TO CHEAPER MODEL WHILE TESTING
+        #model="gpt-3.5-turbo",
+        
+        messages=messages,
+    )
+    return response['choices'][0]['message']['content'], response['choices'][0]['finish_reason']
+
+def generate_response_gpt4(messages): #THIS IS SOLELY FOR TESTING PURPOSES, REMOVE FROM PLANNER WHEN USING ALL GPT-4 AND REPLACE MODEL IN ABOVE FUNCTION
+    response = openai.ChatCompletion.create(
+        model="gpt-4",
+        
         messages=messages,
     )
     return response['choices'][0]['message']['content'], response['choices'][0]['finish_reason']
@@ -119,7 +135,7 @@ def Planner(user_input):
     while "[DONE]" not in response:
         calls += 1
         print(calls)
-        response,finish_reason = generate_response(messages)
+        response,finish_reason = generate_response_gpt4(messages)
         messages.append({"role":"assistant", "content":response})
         print(response)
 
@@ -213,13 +229,20 @@ def Reader(result):
         {"role":"system", "content":f'{readercontent}'},
         {"role":"user", "content":f'Outline: {outline}\n\n Source: {extract_text_from_url(result["link"])}'}
         ]
-    print("Reader is working")
+
+    tokens = num_tokens_from_messages(messages)
+    over_prop = tokens / 8192
+    if over_prop > 1:
+        print("source too long :(")
     while num_tokens_from_messages(messages) > 8192:
-        #remove characters from the end of the source until num_tokens_from_messages is less than 8192
-        messages[1]["content"] = messages[1]["content"][:-1]
+        #remove amount of text that is over the limit based on the proportion of tokens over the limit
+        #remove from the end of the source, ensuring that there are enough tokens for a response (500 tokens)
+
+        messages[1]["content"] = messages[1]["content"][:int(len(messages[1]["content"]) * (1 / over_prop))-500]
+
+    print("Reader is working")
     response,a = generate_response(messages)
     print(response) #remove later on
-    print("if there are empty square brackets above, shit is fucked")
     if not response:
         return json.dumps({})
     return response
