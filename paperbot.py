@@ -61,6 +61,9 @@ def google_custom_search(query, cse_api_key, search_engine_id):
 
         for result in results:
             response = Reader(result)
+            #write response to a file
+            with open(f"readerlog.txt", "w+") as f:
+                f.write(response)
             dictresponse = json.loads(response)
             result["summary"] = dictresponse["Summary"]
             result["score"] = dictresponse["Score"]
@@ -216,6 +219,7 @@ def Reader(result):
         messages[1]["content"] = messages[1]["content"][:-1]
     response,a = generate_response(messages)
     print(response) #remove later on
+    print("if there are empty square brackets above, shit is fucked")
     if not response:
         return json.dumps({})
     return response
