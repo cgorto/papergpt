@@ -32,8 +32,10 @@ def parse_history():
 
 def write_response(response, file_name):
     with open(f"conversations/" + file_name + ".txt", "a+") as f:
-        for resp in response:
-            f.write(resp + "\n")
+        #if response is a dictionary, convert to string
+        if isinstance(response, dict):
+            response = json.dumps(response)
+        f.write(response + "\n")
     return
 
 
@@ -231,6 +233,7 @@ def Researcher(topics):
     messages.append({"role":"assistant", "content":response})
     write_messages(messages, "researcherlog")
     print(response)
+    all_sources = []
     while "[RETURN]" not in response:
         if "[SEARCH]" in response:
             search_query = response.split("[SEARCH]:")[1]
@@ -241,9 +244,9 @@ def Researcher(topics):
             next_index = search_query.find('"', index + 1)
             #store everything between the two quotes as the search query
             search_query = search_query[index + 1:next_index]
-            
 
             search_results = google_custom_search(search_query, cse_api_key, search_engine_id)
+            all_sources.extend(search_results)
             print(search_results)
             print("Researcher is working")
             messages.append({"role":"user", "content":f"Search Results: {search_results}"})
@@ -253,9 +256,9 @@ def Researcher(topics):
             print(response) #remove later on
     
     #sort the top 10 search_results by score
-    search_results.sort(key=lambda x: x["score"], reverse=True)
+    all_sources.sort(key=lambda x: x["score"], reverse=True)
     #return the top 10 search_results
-    return search_results[:10]
+    return all_sources[:10]
 
 
 
