@@ -225,9 +225,15 @@ def Reader(result):
     #store reader.txt into content
     with open("reader.txt", "r") as f:
         readercontent = f.read()
+
+    page_content = extract_text_from_url(result["link"])
+
+    if page_content == "":
+        return json.dumps({})
+
     messages = [
         {"role":"system", "content":f'{readercontent}'},
-        {"role":"user", "content":f'Outline: {outline}\n\n Source: {extract_text_from_url(result["link"])}'}
+        {"role":"user", "content":f'Outline: {outline}\n\n Source: {page_content}'}
         ]
 
     tokens = num_tokens_from_messages(messages)

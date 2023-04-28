@@ -1,6 +1,4 @@
-Ryan, Joe. "The Secrets behind Winning 2018 Midterm Gubernatorial Races." POLITICO, 24 Dec. 2018, https://www.politico.com/magazine/story/2018/12/24/the-secrets-behind-winning-the-2018-midterm-governors-races-223268.
-
 {
-  "Summary": "The article 'The Secrets behind Winning 2018 Midterm Gubernatorial Races' by Joe Ryan provides an analysis of the key factors that led to the victory of candidates in competitive gubernatorial races during the 2018 midterm elections. The author focuses on the role of campaign strategies, demographics, and media coverage in the outcomes of the 2018 gubernatorial races in Florida, Georgia, and Kansas. Comparator Campaign Media Analysis Group (CMAG) data is used to explore the general trends and successful tactics used by the winning candidates in these races. The author identifies common themes such as emphasizing local issues, positive messaging, and connecting with a diverse demographic base as key factors behind the victories. The analysis also highlights the importance of understanding the role of demographics and media coverage in influencing electoral outcomes.",
-  "Score": 85
+  "Source": "Unable to evaluate or summarize the source as it was not provided. Please provide the source material to proceed.",
+  "Score": 0
 }
