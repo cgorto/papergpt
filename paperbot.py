@@ -229,7 +229,7 @@ def Reader(result):
     page_content = extract_text_from_url(result["link"])
 
     if page_content == "":
-        return json.dumps({})
+        return {"Summary": "No summary available", "Score": 0}
 
     messages = [
         {"role":"system", "content":f'{readercontent}'},
