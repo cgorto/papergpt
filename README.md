@@ -1,4 +1,4 @@
-# papergpt
+# PaperGPT
 
 PaperGPT is an autonomous academic paper writing and research tool powered by OpenAI's GPT-4. It simplifies the process of writing research papers by generating outlines, conducting research, summarizing sources, writing sections, and providing editing suggestions based on user input.
 
