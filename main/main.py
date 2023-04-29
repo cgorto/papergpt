@@ -1,8 +1,5 @@
 import os
 import openai
-import json
-import requests
-from bs4 import BeautifulSoup
 from config import OPENAI_API_KEY, SEARCH_API_KEY, ENGINE_ID
 from paperbot import Planner,google_custom_search
 
