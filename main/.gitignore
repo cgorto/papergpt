@@ -8,4 +8,8 @@ plannerlog.txt
 researcherlog.txt
 sources.txt
 writerlog.txt
-finished/
+finished/*
+conversations/*
+
+!conversations/.gitkeep
+!finished/.gitkeep
