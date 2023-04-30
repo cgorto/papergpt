@@ -33,9 +33,13 @@ def main():
 
 
     Planner(query)
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    new_name = f"essay{timestamp}.txt"
+    new_sources = f"sources{timestamp}.txt"
 
     if "essay.txt" in os.listdir("conversations"):
-        os.rename("conversations/essay.txt", "essay.txt")
+        os.rename("conversations/essay.txt", f"finished/{new_name}")
+        os.rename("conversations/sources.txt", f"finished/{new_sources}")
 
     #clear conversations folder
 
