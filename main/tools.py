@@ -4,8 +4,58 @@ import json
 import requests
 import tiktoken
 from bs4 import BeautifulSoup
-from config import OPENAI_API_KEY, SEARCH_API_KEY, ENGINE_ID
+from config import SERVICE_ACCOUNT_FILE, SCOPES
 from colorama import init, Fore, Style
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
+
+
+credentials = service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+service = build('docs', 'v1', credentials=credentials)
+
+def create_doc(title):
+    try:
+        body = {
+            'title': title
+        }
+        doc = service.documents() \
+            .create(body=body).execute()
+        print(f'Created document with title: {doc.get("title")} and URL:'
+              f'https://docs.google.com/document/d/{doc.get("documentId")}/edit')
+    except HttpError as error:
+        print(f'An error occurred: {error}')
+        doc = None
+
+    return doc
+
+def update_doc_content(doc_id, new_content):
+    requests = [{
+        'replaceAllText': {
+            'containsText': {
+                'text': '{{PLACEHOLDER}}',
+                'matchCase': False
+            },
+            'replaceText': new_content
+        }
+    }]
+
+    result = service.documents().batchUpdate(documentId=doc_id, body={'requests': requests}).execute()
+    print(f"Replaced {result['replies'][0]['replaceAllText']['occurrencesChanged']} occurrences.")
+
+def create_and_update_doc(title, file_name):
+    # Create the document
+    doc = create_doc(title)
+    doc_id = doc.get('documentId')
+
+    # Read the content from the file
+    with open(file_name, 'r', encoding='utf-8') as file:
+        file_content = file.read()
+
+    # Update the document's content with the content from the file
+    update_doc_content(doc_id, file_content)
+
+
 
 def write_response(response, file_name):
     with open(f"conversations/" + file_name + ".txt", "a+") as f:
@@ -21,23 +71,26 @@ def write_response(response, file_name):
 def parse_data(data):
     json_data = None
 
-    try:
-        # Try to load the data as JSON
-        json_data = json.loads(data)
-    except json.JSONDecodeError:
-        # If the data is not in JSON format, parse the second format
-        lines = data.split("\n")
-        summary = None
-        score = None
+    if isinstance(data, dict):
+        json_data = data
+    else:
+        try:
+            # Try to load the data as JSON
+            json_data = json.loads(data)
+        except json.JSONDecodeError:
+            # If the data is not in JSON format, parse the second format
+            lines = data.split("\n")
+            summary = None
+            score = None
 
-        for i, line in enumerate(lines):
-            if "Summary:" in line:
-                summary = line.replace("Summary:", "").strip() or lines[i + 1].strip()
-            elif "Score:" in line:
-                score = int(line.replace("Score:", "").strip() or lines[i + 1].strip())
+            for i, line in enumerate(lines):
+                if "Summary:" in line:
+                    summary = line.replace("Summary:", "").strip() or lines[i + 1].strip()
+                elif "Score:" in line:
+                    score = int(line.replace("Score:", "").strip() or lines[i + 1].strip())
 
-        if summary is not None and score is not None:
-            json_data = {"Summary": summary, "Score": score}
+            if summary is not None and score is not None:
+                json_data = {"Summary": summary, "Score": score}
 
     return json_data
 

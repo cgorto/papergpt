@@ -2,11 +2,10 @@ import os
 import openai
 import json
 import requests
-import tiktoken
-from bs4 import BeautifulSoup
 from config import OPENAI_API_KEY, SEARCH_API_KEY, ENGINE_ID
 from colorama import init, Fore, Style
 from tools import write_response, write_messages, read_messages, num_tokens_from_messages, extract_text_from_url, parse_data
+import time
 
 
 init(autoreset=True)
@@ -82,7 +81,7 @@ def google_custom_search(query, cse_api_key, search_engine_id):
         return results
     else:
         print(f"Request failed with status code {response.status_code}")
-        return [{"title": "Your search failed.", "link": ""}]
+        return '{"title": "Your search failed.", "link": ""}'
 
 def generate_response_gpt3(messages):
     response = openai.ChatCompletion.create(
@@ -93,16 +92,34 @@ def generate_response_gpt3(messages):
     return response['choices'][0]['message']['content'], response['choices'][0]['finish_reason']
 
 def generate_response(messages):
-    response = openai.ChatCompletion.create(
-        model="gpt-4",
-        #model="gpt-4-0314",
-        #CHANGED TO CHEAPER MODEL WHILE TESTING
-        #model="gpt-3.5-turbo",
-        temperature = 0.7,
-        
-        messages=messages,
-    )
-    return response['choices'][0]['message']['content'], response['choices'][0]['finish_reason']
+    max_retries=10
+    initial_wait_time=1
+    retries = 0
+    response = None
+    content = None
+    finish_reason = None
+
+    while retries <= max_retries:
+        try:
+            response = openai.ChatCompletion.create(
+                model="gpt-4",
+                temperature=0.7,
+                messages=messages,
+            )
+            content = response['choices'][0]['message']['content']
+            finish_reason = response['choices'][0]['finish_reason']
+            break
+        except openai.error.RateLimitError as e:
+            if retries == max_retries:
+                print("Exceeded maximum retries. Exiting.")
+                return None, None
+            else:
+                wait_time = initial_wait_time * (2 ** retries)
+                print(f"Rate limit exceeded. Retrying in {wait_time} seconds.")
+                time.sleep(wait_time)
+                retries += 1
+
+    return content, finish_reason
 
 def Planner(user_input):
     global outline
@@ -233,7 +250,7 @@ def Reader(result):
 
     if page_content == "":
         print(Fore.RED + "Something failed")
-        return [{"title": "Your search failed.", "link": ""}]
+        return '{"title": "Your search failed.", "link": ""}'
 
 
     messages = [

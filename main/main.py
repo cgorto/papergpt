@@ -1,8 +1,8 @@
 import os
 import openai
 from config import OPENAI_API_KEY, SEARCH_API_KEY, ENGINE_ID
-from paperbot import Planner,parse_history,Editor
-from tools import parse_data
+from paperbot import Planner,parse_history
+from tools import create_and_update_doc
 from datetime import datetime
 
 openai.api_key = OPENAI_API_KEY
@@ -41,7 +41,14 @@ def main():
         os.rename("conversations/essay.txt", f"finished/{new_name}")
         os.rename("conversations/sources.txt", f"finished/{new_sources}")
 
-    #clear conversations folder
+    #remove all files from conversations folder
+    for file in os.listdir("conversations"):
+        os.remove(f"conversations/{file}")
+
+
+#def main():
+    #create_and_update_doc("Essay", "essay.txt")
+
 
 if __name__ == "__main__":
     main()
