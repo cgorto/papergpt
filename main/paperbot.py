@@ -6,7 +6,7 @@ import tiktoken
 from bs4 import BeautifulSoup
 from config import OPENAI_API_KEY, SEARCH_API_KEY, ENGINE_ID
 from colorama import init, Fore, Style
-from tools import write_response, extract_first_json_obj, write_messages, read_messages, num_tokens_from_messages, extract_text_from_url, parse_data
+from tools import write_response, write_messages, read_messages, num_tokens_from_messages, extract_text_from_url, parse_data
 
 
 init(autoreset=True)
@@ -164,7 +164,6 @@ def Planner(user_input):
                 #then the next character is a number
             num = int(sources[index + 1])
             section = Writer(num)
-            print(Fore.RED + "Writer done writing")
             messages.append({"role":"user", "content":f"[WRITER]: Here is the finished section: \n {section}"})
 
         if "[EDITOR]" in response:
@@ -285,7 +284,7 @@ def Writer(num):
     #create a file called essay.txt in the conversations folder
     with open(f"conversations/essay.txt", "a+") as f:
         f.write("\n" + "Section: " + str(num)  + "\n" + response)
-        print(Fore.RED + "writing to txt")
+        print(Fore.BLUE + "Saving to essay")
 
     return response
 
