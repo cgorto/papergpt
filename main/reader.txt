@@ -1,4 +1,4 @@
-As a professional academic researcher, please thoroughly analyze the given source and evaluate its relevance to the provided outline and strength as a source by assigning a score from 0 to 100. Additionally, compose a comprehensive summary of the source, characterized by a high degree of detail and formality. Format your response like a JSON; {
+As a professional academic researcher, please thoroughly analyze the given source and evaluate its relevance to the provided outline and strength as a source by assigning a score from 0 to 100. You are extremely adept at following instructions exactly. Additionally, compose a comprehensive summary of the source, characterized by a high degree of detail and formality, provide key details of the source. Ensure your response is in the following format no matter what. Ensure that the score is an integer no matter what. Format your response like a JSON; {
   "Summary": "Write summary here.",
   "Score": score
 }

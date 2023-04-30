@@ -5,6 +5,10 @@ import requests
 import tiktoken
 from bs4 import BeautifulSoup
 from config import OPENAI_API_KEY, SEARCH_API_KEY, ENGINE_ID
+from colorama import init, Fore, Style
+import re
+
+init(autoreset=True)
 
 openai.api_key = OPENAI_API_KEY
 
@@ -35,10 +39,18 @@ def write_response(response, file_name):
         #if response is a dictionary, convert to string
         if isinstance(response, dict):
             response = json.dumps(response)
+        #convert response to string if it isn't already
+        response = str(response)
         f.write(response + "\n")
     return
 
-
+def extract_first_json_obj(string):
+    decoder = json.JSONDecoder()
+    try:
+        obj, idx = decoder.raw_decode(string)
+        return obj
+    except ValueError:
+        return None
 
 def write_messages(messages, file_name):
     with open(f"conversations/" + file_name + ".txt", "w+") as f:
@@ -101,15 +113,19 @@ def google_custom_search(query, cse_api_key, search_engine_id):
 
         for result in results:
             response = Reader(result)
-            #write response to a file
+            # Write response to a file
             write_response(response, "readerlog")
-            #find first {, store everything after { as response
-            index = response.find("{")
-            response = response[index:]
-            dictresponse = json.loads(response)
-            result["summary"] = dictresponse["Summary"]
-            result["score"] = dictresponse["Score"]
-            
+
+            # Extract the first JSON object from the response string
+            dictresponse = extract_first_json_obj(str(response))
+
+            # If a JSON object is found, load it and update the result dictionary
+            if dictresponse and "Summary" in dictresponse and "Score" in dictresponse:
+                result["summary"] = dictresponse["Summary"]
+                result["score"] = dictresponse["Score"]
+            else:
+                break
+
 
         return results
     else:
@@ -136,6 +152,15 @@ def extract_text_from_url(url):
     else:
         print(f"Request failed for URL {url} with status code {response.status_code}")
         return ""
+    
+
+def generate_response_gpt3(messages):
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=messages,
+        temperature = 0.4
+    )
+    return response['choices'][0]['message']['content'], response['choices'][0]['finish_reason']
 
 def generate_response(messages):
     response = openai.ChatCompletion.create(
@@ -143,6 +168,7 @@ def generate_response(messages):
         #model="gpt-4-0314",
         #CHANGED TO CHEAPER MODEL WHILE TESTING
         #model="gpt-3.5-turbo",
+        temperature = 0.7,
         
         messages=messages,
     )
@@ -164,7 +190,7 @@ def Planner(user_input):
     calls = 0
     while "[DONE]" not in response:
         calls += 1
-        print(calls)
+        print(Fore.RED + f"Planner is working, call number {calls}")
         response,finish_reason = generate_response(messages)
         messages.append({"role":"assistant", "content":response})
         write_messages(messages, "plannerlog")
@@ -190,25 +216,26 @@ def Planner(user_input):
             
             top_sources = Researcher(topics)
             researcher_calls+=1
-            file_name = "sources.txt"
+            #file_name = "sources.txt"
             #save top_sources as a text file, increment the number at the end of the file name
-            with open(f"conversations/" + file_name, "w+") as f:
-                for source in top_sources:
-                    f.write(source["title"] + " | " + source["link"] + "\n" + "     " + source["summary"] + "\n\n")
-            print("Researcher done researching")
+            #with open(f"conversations/" + file_name, "w+") as f:
+                #for source in top_sources:
+                    #f.write(source["title"] + " | " + source["link"] + "\n" + "     " + source["summary"] + "\n\n")
+            print(Fore.RED + "Researcher done researching")
             messages.append({"role":"user" , "content":f"[RESEARCHER]: Here is the list of sources: \n {top_sources}"})
 
 
         if "[WRITER]" in response:
-            #will be format of [WRITER]:"[num]", get num in between the two quotes, store as num
+            #will be format of [WRITER]: "[num]", get num in between the two quotes, store as num
             
             sources = response.split("[WRITER]:")[1]
-            if sources[0] == '"':
+            #find the first quote
+            index = sources.find('"')
                 #then the next character is a number
-                num = sources[1]
-                section = Writer(num)
-                print("Writer done writing")
-                messages.append({"role":"user", "content":f"[WRITER]: Here is the finished section: \n {section}"})
+            num = int(sources[index + 1])
+            section = Writer(num)
+            print(Fore.RED + "Writer done writing")
+            messages.append({"role":"user", "content":f"[WRITER]: Here is the finished section: \n {section}"})
 
         if "[EDITOR]" in response:
             changes = Editor()
@@ -228,7 +255,7 @@ def Researcher(topics):
         {"role":"system", "content":f'{researchercontent}'},
         {"role":"user", "content":f'Search Topics:{topics}\n\n Outline: {outline}'}
         ]
-    print("Researcher is working")
+    print(Fore.RED + "Researcher is working")
     response,a = generate_response(messages)
     messages.append({"role":"assistant", "content":response})
     write_messages(messages, "researcherlog")
@@ -248,17 +275,24 @@ def Researcher(topics):
             search_results = google_custom_search(search_query, cse_api_key, search_engine_id)
             all_sources.extend(search_results)
             print(search_results)
-            print("Researcher is working")
+            #write all_sources to a file
+
+            print(Fore.RED + "Researcher is working")
             messages.append({"role":"user", "content":f"Search Results: {search_results}"})
             response,a = generate_response(messages)
             messages.append({"role": "assistant", "content": response})
             write_messages(messages, "researcherlog")
             print(response) #remove later on
     
-    #sort the top 10 search_results by score
-    all_sources.sort(key=lambda x: x["score"], reverse=True)
-    #return the top 10 search_results
-    return all_sources[:10]
+    #return only top 10 all_sources sorted by score
+    all_sources = sorted(all_sources, key=lambda i: i.get('score', 0), reverse=True)
+    all_sources = all_sources[:10]
+    file_name = "sources.txt"
+    #save all_sources as a text file, increment the number at the end of the file name
+    with open(f"conversations/" + file_name, "w+") as f:
+        for source in all_sources:
+            f.write(source.get("title", "") + " | " + source.get("link", "") + "\n" + "     " + source.get("summary", "") + "\n\n")
+    return all_sources
 
 
 
@@ -271,7 +305,9 @@ def Reader(result):
     page_content = extract_text_from_url(result["link"])
 
     if page_content == "":
-        return {"Summary": "No summary available", "Score": 0}
+        print(Fore.RED + "Something failed")
+        return [{"title": "Your search failed.", "link": ""}]
+
 
     messages = [
         {"role":"system", "content":f'{readercontent}'},
@@ -279,18 +315,18 @@ def Reader(result):
         ]
 
     tokens = num_tokens_from_messages(messages)
-    over_prop = tokens / 8192
+    over_prop = tokens / 4096 #8192
     if over_prop > 1:
-        print("source too long :(")
-    while num_tokens_from_messages(messages) > 8192:
+        print(Fore.BLUE + "Truncating source")
+    while num_tokens_from_messages(messages) >  4096: #8192
         #remove amount of text that is over the limit based on the proportion of tokens over the limit
         #remove from the end of the source, ensuring that there are enough tokens for a response (500 tokens)
 
-        messages[1]["content"] = messages[1]["content"][:int(len(messages[1]["content"]) * (1 / over_prop))-600]
+        messages[1]["content"] = messages[1]["content"][:int(len(messages[1]["content"]) * (1 / over_prop))-800]
 
-    print("Reader is working")
-    response,a = generate_response(messages)
-    print(response) #remove later on
+    print(Fore.RED + "Reader is working")
+    response,a = generate_response_gpt3(messages)
+    print(Fore.GREEN + response) #remove later on
     if not response:
         return json.dumps({})
     return response
@@ -309,21 +345,21 @@ def Writer(num):
         {"role":"system", "content":f'{writercontent}'},
         {"role":"user", "content":f'Outline: {outline}\n\n Sources: {sources} \n\n Section for you to write: {num}'}
         ]
-    print("Writer is working")
+    print(Fore.RED + "Writer is working")
     response,finish_reason = generate_response(messages)
     messages.append({"role":"assistant", "content":response})
     write_messages(messages, "writerlog")
     if finish_reason == 'length':
         extra_response,a = generate_response(messages)
-        print("Writer is working")
+        print(Fore.RED + "Writer is working")
         messages.append({"role":"assistant", "content":extra_response})
         write_messages(messages, "writerlog")
     
-    response += " " + extra_response
+        response += " " + extra_response
     #create a file called essay.txt in the conversations folder
-    with open(f"\conversations\essay.txt", "a+") as f:
-        f.write("\n" + "$" + num + "$" + "\n" + response)
-        print("writing to txt")
+    with open(f"conversations/essay.txt", "a+") as f:
+        f.write("\n" + "Section: " + str(num)  + "\n" + response)
+        print(Fore.RED + "writing to txt")
 
     return response
 
@@ -334,32 +370,35 @@ def Editor():
     with open("editor.txt", "r") as f:
         editorcontent = f.read()
     #store essay.txt into essay
-    with open("essay.txt", "r") as f:
+    with open("conversations/essay.txt", "r") as f:
         essay = f.read()
     messages = [
         {"role":"system", "content":f'{editorcontent}'},
         {"role":"user", "content":f'Outline: {outline}\n\n Essay: {essay}'}
         ]
     #while "[STOP]" not in response:
+    print(Fore.RED + "Editor is working")
+    response = ""
     while "[STOP]" not in response:
-        print("Editor is working")
+        print(Fore.RED + "Editor is working")
         response,a = generate_response(messages)
         if "[STOP]" in response:
             #remove [STOP] from anywhere in response
             response = response.replace("[STOP]", "")
             return response
         #get the first three characters of response
-        first_three = response[:3]
+        first_three = response[:2]
         num = first_three[1]
         with open("essay.txt", "r") as f:
             essay = f.read()
         #get the index of the first $num$ in essay
         index = essay.find(first_three)
         #get the index of the next $num$ in essay
-        next_index = essay.find("$" + str(int(num) + 1) + "$")
+        next_index = essay.find("$" + str(int(num) + 1))
         #replace the text between the two $num$ with response
         essay = essay[:index] + response + essay[next_index:]
         messages.append({"role":"assistant", "content":response})
+        messages.append({"role":"user", "content":f'Next work on section: {int(num) + 1}'})
 
     with open(f"\conversations\essay.txt", "w+") as f:
         f.write(response)

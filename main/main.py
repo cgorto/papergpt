@@ -1,7 +1,7 @@
 import os
 import openai
 from config import OPENAI_API_KEY, SEARCH_API_KEY, ENGINE_ID
-from paperbot import Planner,parse_history
+from paperbot import Planner,parse_history,Editor
 
 openai.api_key = OPENAI_API_KEY
 
@@ -18,9 +18,11 @@ def main():
     #prompt user for input
     query = input("What would you like to write about? ")
     #use input for planner
-    Planner(query)
+    #Planner(query)
+    Editor()
+    #move essay.txt from conversations to main folder
+    os.rename("conversations/essay.txt", "essay.txt")
 
-    #move essay, sources from conversations folder to paper folder
     #clear conversations folder
 
 if __name__ == "__main__":
