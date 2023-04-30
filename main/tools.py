@@ -17,6 +17,35 @@ def write_response(response, file_name):
         f.write(response + "\n")
     return
 
+
+def parse_data(data):
+    json_data = None
+
+    try:
+        # Try to load the data as JSON
+        json_data = json.loads(data)
+    except json.JSONDecodeError:
+        # If the data is not in JSON format, parse the second format
+        lines = data.split("\n")
+        summary = None
+        score = None
+
+        for i, line in enumerate(lines):
+            if "Summary:" in line:
+                summary = line.replace("Summary:", "").strip() or lines[i + 1].strip()
+            elif "Score:" in line:
+                score = int(line.replace("Score:", "").strip() or lines[i + 1].strip())
+
+        if summary is not None and score is not None:
+            json_data = {"Summary": summary, "Score": score}
+
+    return json_data
+
+# Test cases
+
+
+
+
 def extract_first_json_obj(string):
     decoder = json.JSONDecoder()
     try:

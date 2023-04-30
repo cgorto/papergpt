@@ -6,7 +6,7 @@ import tiktoken
 from bs4 import BeautifulSoup
 from config import OPENAI_API_KEY, SEARCH_API_KEY, ENGINE_ID
 from colorama import init, Fore, Style
-from tools import write_response, extract_first_json_obj, write_messages, read_messages, num_tokens_from_messages, extract_text_from_url
+from tools import write_response, extract_first_json_obj, write_messages, read_messages, num_tokens_from_messages, extract_text_from_url, parse_data
 
 
 init(autoreset=True)
@@ -68,7 +68,8 @@ def google_custom_search(query, cse_api_key, search_engine_id):
             write_response(response, "readerlog")
 
             # Extract the first JSON object from the response string
-            dictresponse = extract_first_json_obj(str(response))
+            #dictresponse = extract_first_json_obj(str(response))
+            dictresponse = parse_data(response)
 
             # If a JSON object is found, load it and update the result dictionary
             if dictresponse and "Summary" in dictresponse and "Score" in dictresponse:
@@ -301,7 +302,7 @@ def Editor():
         {"role":"user", "content":f'Outline: {outline}\n\n Essay: {essay}'}
         ]
     #while "[STOP]" not in response:
-    print(Fore.RED + "Editor is working")
+    #print(Fore.RED + "Editor is working")
     response = ""
     while "[STOP]" not in response:
         print(Fore.RED + "Editor is working")
