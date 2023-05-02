@@ -10,7 +10,7 @@ sources.txt
 writerlog.txt
 finished/*
 conversations/*
-papergpt-385322-d38e4f1f7e59.json
-
 !conversations/.gitkeep
 !finished/.gitkeep
+secret/*
+old_essay*
